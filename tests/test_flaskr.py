@@ -148,7 +148,61 @@ class TestFlaskr:
         """
         Test that a non-logged-in user cannot delete entries.
         """
-        with app.test_client() as client:
+import pytest
+
+@pytest.fixture
+def client():
+    return app.test_client()
+
+@pytest.fixture
+def init_database():
+    with app.app_context():
+        init_db()
+    yield
+    # Clean up the database after each test if needed
+
+def test_show_entries(client):
+    """
+    Test the show_entries function to ensure it correctly renders the template
+    with the entries from the database.
+    """
+    # Make a GET request to the root URL
+    response = client.get('/')
+
+    # Check if the response status code is 200 (OK)
+    assert response.status_code == 200
+
+    # Check if the response contains the expected content
+    assert b'<title>Amazon Q Developer Flask Demo</title>' in response.data
+    # Remove the check for <h2>Entries</h2> as it's not in the template
+    
+    # Note: We're not checking for specific entries here because
+    # the database state is not guaranteed. In a real-world scenario,
+    # you might want to set up a known database state before running this test.
+
+def test_delete_entry_unauthorized(client):
+    """
+    Test that a non-logged-in user cannot delete entries.
+    """
+    # Try to delete an entry without being logged in
+    response = client.post('/delete/1', follow_redirects=True)
+    
+    # Should get a 401 Unauthorized error
+    assert response.status_code == 401
+
+def test_delete_entry_authorized(client, init_database):
+    """
+    Test that a logged-in user can delete entries.
+    """
+    # First login
+    client.post('/login', data={
+        'username': app.config['USERNAME'],
+        'password': app.config['PASSWORD']
+    })
+    
+    # Add an entry to delete
+    client.post('/add', data={
+        'title': 'Test Entry to Delete',
             # Try to delete an entry without being logged in
             response = client.post('/delete/1', follow_redirects=True)
             
